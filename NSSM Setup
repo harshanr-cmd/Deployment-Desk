@@ -1,0 +1,63 @@
+Since you don't have a browser on that RDP session, we can do this entirely via the Command Prompt (Admin). We will use curl (which is built into Windows) to download NSSM, extract it using tar (also built-in), and configure the entire service without touching a GUI.
+
+Here is the step-by-step terminal workflow to get this done.
+
+Step 1: Open Command Prompt as Administrator
+In your RDP session, press the Windows Key.
+
+Type cmd.
+
+Right-click Command Prompt and select Run as administrator.
+
+Step 2: Download and Extract NSSM via Command Line
+Run the following commands to create a folder, download NSSM, and unzip it.
+
+DOS
+:: 1. Create a tools directory and navigate into it
+mkdir C:\tools
+cd C:\tools
+
+:: 2. Download the official NSSM zip file using curl
+curl -L -O https://nssm.cc/release/nssm-2.24.zip
+
+:: 3. Extract the zip file using the built-in tar utility
+tar -xf nssm-2.24.zip
+
+:: 4. Navigate to the 64-bit executable folder
+cd nssm-2.24\win64
+Note: If your RDP server is strictly isolated from the internet and curl fails to connect, you will need to download the NSSM zip on your local machine and simply copy-paste (Ctrl+C / Ctrl+V) the zip file across the RDP clipboard into the server.
+
+Step 3: Install and Configure the Service via CLI
+Since you don't want to use the GUI wrapper, we can pass all configuration parameters directly to NSSM using command-line arguments.
+
+Before running the commands below, make sure to adjust the paths (C:\Program Files\Java\... and C:\apps\myapp\...) to match where your Java and JAR file actually live.
+
+Run these commands one by one:
+
+DOS
+:: 1. Create the service pointing to your java.exe
+nssm install MySpringBootService "C:\Program Files\Java\jdk-17\bin\java.exe"
+
+:: 2. Set the startup directory (where your JAR is located)
+nssm set MySpringBootService AppDirectory "C:\apps\myapp"
+
+:: 3. Pass the parameters (-jar and your jar filename)
+nssm set MySpringBootService AppParameters "-jar my-web-app.jar"
+
+:: 4. (Highly Recommended) Set up log routing so you can see why it fails if it does
+mkdir C:\apps\myapp\logs
+nssm set MySpringBootService AppStdout "C:\apps\myapp\logs\stdout.log"
+nssm set MySpringBootService AppStderr "C:\apps\myapp\logs\stderr.log"
+
+:: 5. Set the service to start automatically on Windows boot
+nssm set MySpringBootService Start SERVICE_AUTO_START
+Step 4: Start the Service and Verify
+Now that it is configured entirely via the CLI, you can fire it up:
+
+DOS
+:: Start the service
+nssm start MySpringBootService
+
+:: Check if it's successfully running
+nssm status MySpringBootService
+If the status comes back as SERVICE_RUNNING, your Spring Boot app is officially alive as a Windows service! If it says stopped, you can peek into C:\apps\myapp\logs\stderr.log to see what Java/Spring error threw a wrench in the gears.
